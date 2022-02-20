@@ -1,12 +1,13 @@
 import discord
 import random
 import json
+import asyncio
 from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.members = True
 
-clonebot = True
+clonebot = False
 
 if clonebot == True:
     cpfx = "."
@@ -33,6 +34,7 @@ leave = '🚪'
 modkey = '🔑'
 stay = '☑'
 challenge = '⚔'
+rm = '🗡️'
 abort = '🔴'
 accept = '✅'
 cancel = '❌'
@@ -195,7 +197,7 @@ startersize = 3
 if startersize == 3:
     starters = ['<:Battlefield:837907213627686943>', '<:FinalDestination:837907213695057950>',
                 '<:Smashville:837907213678542863>']
-    counterpicks = []
+    counterpicks = ['<:YoshisIsland:925956998024007680>', '<:PS1:925957052147310622>']
     stages = [BF, FD, SV]
 
 elif startersize == 5:
@@ -206,7 +208,7 @@ elif startersize == 5:
                     '<:FrigateOrpheon:925957063383867483>']
     stages = [BF, FD, SV, YI, LC]
 fullstagelist = starters + counterpicks
-dsl = False
+dsl = True
 
 sets = ["bo3", "bo5", "bo7"]
 
@@ -513,7 +515,7 @@ def calculateELO(winnerID, loserID, matchType, endCheck, modCheck, wNeeded):
 
     # calculates the likely-hood of the result not occurring
     score = 1 - (1 / (1 + 10 ** ((loserRating - winnerRating) / 400)))
-    multiplier = 18
+    multiplier = 19
 
     if endCheck == True or modCheck == True:
         wRewardPoints = round(multiplier * score * wMultiplier * endMultiplier)
@@ -572,7 +574,7 @@ async def helpme(ctx):
                   f"**__ranked__** ``(Online Type)`` ``(Set Type)``\n"
                   f"> This command begins a search queue for a ranked set. (Only usable in <#{searchChannel}>)\n"
                   f"> Online Type = ``netp`` (if you use netplay) or ``wifi`` (if you use wiimmfi)\n"
-                  f"> Set Type = ``bo3`` (best of 3) or ``bo5`` (best of 5)\n"
+                  f"> Set Type = ``bo3`` (best of 3) or ``bo5`` or ``bo7``\n"
                   f"> \n"
                   f"> examples:\n"
                   f"> ``-ranked netp bo3``\n"
@@ -958,11 +960,11 @@ async def ranked(ctx):
     embed = discord.Embed(
         title=f"{ctx.message.author} [{showELO}] is searching for a match... \n"
               f"( {icon} {matchType} || {setType} )",
-        description=f"({abort} = cancel search)\n(Search will be deleted after 1 hour)\nClick on {challenge} to challenge them!\n"
+        description=f"({abort} = cancel search)\n(Search will end after 1 hour)\nClick on {challenge} to challenge them!\n"
                     f"Or unreact to withdraw your challenge.",
         color=discord.Colour(embedColor))
     embed.set_thumbnail(url=f"{ctx.message.author.avatar_url}")
-    matchSearch = await ctx.send(embed=embed, delete_after=3600)
+    matchSearch = await ctx.send(embed=embed)
     searching[matchType][setType].append(playerID)
     searchMessages[matchSearch.id] = {"player": playerID,
                                       "matchType": matchType,
@@ -976,9 +978,20 @@ async def ranked(ctx):
 
     # print("searching: ", searching)
     # print("searchMessages:", searchMessages)
-
     for icon in searchIcons:
         await matchSearch.add_reaction(icon)
+
+    searchDuration = 3600
+    await asyncio.sleep(searchDuration)
+    if matchSearch.id in searchMessages:
+        searchClose = discord.Embed(
+            title=f"{ctx.message.author} [{showELO}] was searching for a match.",
+            description=f"Search queue ended",
+            color=discord.Colour(embedColor))
+        searchClose.set_thumbnail(url=f"{ctx.message.author.avatar_url}")
+        await matchSearch.edit(embed=searchClose)
+        await matchSearch.clear_reactions()
+        forgetMessage(matchSearch.id)
 
 
 @client.event
@@ -1025,10 +1038,20 @@ async def on_reaction_add(reaction, user):
 
         # event the player wants to cancel the search
         if reaction.emoji == abort and challengerID == playerID:  # only the person that queues up can cancel the search
-            commandmessage = searchMessages[messageID]["queue"]
+            showELO = displayELO(playerID, searchMessages[messageID]["matchType"])
+            embedColor = searchMessages[messageID]["color"]
+            searchEnd = discord.Embed(
+                title=f"{user} [{showELO}] was searching for a match.",
+                description=f"Search queue ended",
+                color=discord.Colour(embedColor))
+            searchEnd.set_thumbnail(url=f"{user.avatar_url}")
+            searchObj = searchMessages[messageID]["messageObj"]
+            await searchObj.edit(embed=searchEnd)
+            await searchObj.clear_reactions()
             forgetMessage(messageID)
-            await reaction.message.delete()
-            await commandmessage.message.delete()
+            #commandmessage = searchMessages[messageID]["queue"]
+            #await reaction.message.delete()
+            #await commandmessage.message.delete()
             # print("searching should be gone: ", searching)
             # print("searchMessages should have deleted", searchMessages)
             # print("should have deleted challenges", challengeMessages)
@@ -1213,14 +1236,15 @@ async def on_reaction_add(reaction, user):
                     dm = await (client.get_user(selecting)).create_dm()
                     charaSelect = discord.Embed(title=f"[Game {gameCount} | {stage} {emotes2stage[stage]}]",
                                                 description=f"Choose your character for Game {gameCount}! \n Type out what character you will use.\n"
-                                                            f"If you're staying on the same character, type ''stay''\n"
+                                                            f"If you're staying on the same character, click {stay}\n"
                                                             f"\n"
                                                                 f"If you're having trouble selecting a character, type ``-characters``"
                                                                 " to see a list of all character inputs I can recognize.",
                                                     color=defaultColor)
                     charaSelect.set_thumbnail(
                         url="https://media.discordapp.net/attachments/405387786036707329/843029286961414144/coinhand2.png")
-                    await dm.send(embed=charaSelect)
+                    charaSelMessage = await dm.send(embed=charaSelect)
+                    await charaSelMessage.add_reaction(stay)
 
         # event when win or loss is clicked
         elif str(reaction.emoji) in winloss and user.id in matches[reaction.message.id]["players"]:
@@ -1254,8 +1278,9 @@ async def on_reaction_add(reaction, user):
             winnerChara = matches[messageID]['players'][winner]['character']
             if dsl == True:
                 dslstage = matches[messageID]['stages']
-                matches[messageID]['players'][winner]['dsl'].append(dslstage[0])
-            #print("dsl check: ", matches[messageID]['players'][winner])
+                if dslstage[0] not in matches[messageID]['players'][winner]['dsl']:
+                    matches[messageID]['players'][winner]['dsl'].append(dslstage[0])
+            # print("dsl check: ", matches[messageID]['players'][winner])
             matchWindowObj = matches[messageID]["messageObj"]
             embedCount = matches[messageID]["gameCount"] - 1
             newEmbed = matchWindowObj.embeds[0]
@@ -1304,7 +1329,6 @@ async def on_reaction_add(reaction, user):
                 editPreranked(loser, matchType)
                 showWinnerELO = displayELO(winner, matchType)
                 showLoserELO = displayELO(loser, matchType)
-                forgetMessage(messageID)
                 # print("players2matches should be empty: ", players2matches)
                 # print("opponents should be empty: ", opponents)
                 # print("matches should be forgotten: ", matches)
@@ -1313,11 +1337,21 @@ async def on_reaction_add(reaction, user):
                                 value=f"{win} {str(client.get_user(winner))[:-5]} [{showWinnerELO}] {winnerChange}\n"
                                       f"{loss} {str(client.get_user(loser))[:-5]} [{showLoserELO}] {loserChange}",
                                 inline=False)
+                rmWindow = 90
+                embed.set_footer(text= f"Both players can click {rm} to initiate a rematch")
                 winnerAvatar = client.get_user(winner).avatar_url
                 embed.set_thumbnail(url=winnerAvatar)
+                await matchWindowObj.unpin()
                 await matchWindowObj.edit(embed=embed)
                 await matchWindowObj.clear_reactions()
-                await matchWindowObj.unpin()
+                await matchWindowObj.add_reaction(rm)
+                await asyncio.sleep(rmWindow)
+                await matchWindowObj.clear_reactions()
+                embed.set_footer(text="")
+                await matchWindowObj.edit(embed=embed)
+                if messageID in matches.keys():
+                    # print("rematch window closed")
+                    forgetMessage(messageID)
 
             #otherwise
             else:
@@ -1338,6 +1372,90 @@ async def on_reaction_add(reaction, user):
                 # print("newstages", newstages)
                 for icon in newstages:
                     await matchWindowObj.add_reaction(icon)
+
+        # if rematch is clicked
+        elif reaction.emoji == rm and user.id in matches[messageID]["players"].keys():
+            # print("rematch was clicked")
+            matches[messageID]["rematch"][user.id] = True
+            if len(matches[messageID]["rematch"].keys()) == 2:
+                messageObj = matches[messageID]["messageObj"]
+                messageEmbed = messageObj.embeds[0]
+                messageEmbed.set_footer(text="")
+                await messageObj.edit(embed=messageEmbed)
+                await messageObj.clear_reactions()
+
+                playerID = matches[messageID]["playerList"][0]
+                challengerID = matches[messageID]["playerList"][1]
+                channel = client.get_channel(matchChannel)
+                pings = await channel.send(f"<@{playerID}> <@{challengerID}>")
+
+                matchType = matches[messageID]["matchType"]
+                playerELO = displayELO(playerID, matchType)
+                challengerELO = displayELO(challengerID, matchType)
+                playerName = client.get_user(playerID)
+                challengerName = client.get_user(challengerID)
+                icon = matches[messageID]["icon"]
+                setType = matches[messageID]["setType"]
+                embedColor = matches[messageID]["embedColor"]
+                winsNeeded = matches[messageID]["winsNeeded"]
+                forgetMessage(messageID)
+                # print("checking for empty matches list: ", matches)
+                embed = discord.Embed(
+                    title=f"{str(playerName)[:-5]} [{playerELO}] vs {str(challengerName)[:-5]} [{challengerELO}] \n"
+                          f"( {icon} {matchType} || {setType} )",
+                    description=f"(Both players can agree to cancel the set by clicking: {cancel}.)",
+                    color=discord.Colour(embedColor))
+                embed.add_field(name="Game 1", value="(double blind in progress...)\n")
+                rematchWindow = await channel.send(embed=embed)
+                await rematchWindow.pin()
+                matches[rematchWindow.id] = {
+                    "players": {
+                        playerID: {"character": "N/A", "wins": 0, "elo": rankings[matchType][playerID], "dsl": []},
+                        challengerID: {"character": "N/A", "wins": 0, "elo": rankings[matchType][challengerID],
+                                       "dsl": []}
+                        },
+                    "winsNeeded": winsNeeded,
+                    "cancel": {},
+                    "rematch": {},
+                    "heading": "N/A",
+                    "gameCount": 1,
+                    "stages": starters[:],
+                    "banning": "N/A",
+                    "stagesel": "N/A",
+                    "selections": {playerID: True, challengerID: True},
+                    "winner": "N/A",
+                    "loser": "N/A",
+                    "pings": pings,
+                    "messageObj": rematchWindow,
+                    "matchType": matchType,
+                    "setType": setType,
+                    "icon": icon,
+                    "embedColor": embedColor,
+                    "playerList": [playerID, challengerID]
+                }
+
+                players2matches[playerID] = rematchWindow.id
+                players2matches[challengerID] = rematchWindow.id
+                opponents[playerID] = challengerID
+                opponents[challengerID] = playerID
+                # print("opponents", opponents)
+                # print("players: ", players2matches)
+
+                await rematchWindow.add_reaction(cancel)
+                dm1 = await playerName.create_dm()
+                dm2 = await challengerName.create_dm()
+                charaSelect = discord.Embed(title="[Game 1] (double blind)",
+                                            description="Choose your character! \n Type out what character you will use.\n"
+                                                        "\n"
+                                                        "If you're having trouble selecting a character, type ``-characters``"
+                                                        " to see a list of all character inputs I can recognize.",
+                                            color=defaultColor)
+                charaSelect.set_thumbnail(
+                    url="https://media.discordapp.net/attachments/405387786036707329/843029286961414144/coinhand2.png")
+                await dm1.send(embed=charaSelect)
+                await dm2.send(embed=charaSelect)
+                # print("checking for new matches list: ", matches)
+
 
         # if the reaction is coming from a mod
         elif reaction.emoji == modkey:
@@ -1594,7 +1712,7 @@ async def on_raw_reaction_add(payload):
         return
 
     # checks if reaction is on a challenge message
-    if payload.message_id not in challengeMessages.keys():
+    if payload.message_id not in challengeMessages.keys() and playerID not in players2matches.keys():
         # print("not in there")
         return
 
@@ -1634,9 +1752,20 @@ async def on_raw_reaction_add(payload):
         # print(winsNeeded)
 
         # bot now stops keeping track of the search and corresponding challenge messages
-        await searchMessages[searchmes]["queue"].message.delete()
-        await searchMessages[searchmes]["messageObj"].delete()
+        #await searchMessages[searchmes]["queue"].message.delete()
+        #await searchMessages[searchmes]["messageObj"].delete()
+
+        searchQueue = searchMessages[searchmes]["messageObj"]
+        showELO = displayELO(playerID, matchType)
+        searchFound = discord.Embed(
+            title=f"{playerName} [{showELO}] found a match.",
+            description=f"versus <@{challengerID}>",
+            color=discord.Colour(embedColor))
+        searchFound.set_thumbnail(url=playerName.avatar_url)
+        await searchQueue.edit(embed=searchFound)
+        await searchQueue.clear_reactions()
         forgetMessage(searchmes)
+
 
         pings = await channel.send(f"<@{playerID}> <@{challengerID}>")
 
@@ -1656,6 +1785,7 @@ async def on_raw_reaction_add(payload):
                         },
             "winsNeeded": winsNeeded,
             "cancel": {},
+            "rematch": {},
             "heading": "N/A",
             "gameCount": 1,
             "stages": starters[:],
@@ -1666,7 +1796,11 @@ async def on_raw_reaction_add(payload):
             "loser": "N/A",
             "pings": pings,
             "messageObj": matchWindow,
-            "matchType": matchType
+            "matchType": matchType,
+            "setType": setType,
+            "icon": icon,
+            "embedColor": embedColor,
+            "playerList": [playerID, challengerID]
         }
         #print("matches: ", matches)  # testing
 
@@ -1694,8 +1828,69 @@ async def on_raw_reaction_add(payload):
         # print("searches should be deleted: ", searchMessages)  # testing
         # print("challenges should be deleted: ", challengeMessages)
 
-    # elif payload.emoji.name == stay and playerID != client.user.id:
-    # print("will work on this later")
+    elif payload.emoji.name == stay and playerID != botID:
+        playerDM = client.get_user(playerID)
+        opponentDM = client.get_user(opponents[playerID])
+        matchchannel = f"<#{matchChannel}>"
+        matchWindowID = players2matches[playerID]
+        selectedDM = await playerDM.create_dm()
+        selectedChara = discord.Embed(title=f"{matches[matchWindowID]['players'][playerID]['character']} selected!",
+                                      description=f"Return to matchmaking: Click here -> {matchchannel}",
+                                      color=defaultColor)
+        selectedChara.set_thumbnail(
+            url="https://cdn.discordapp.com/attachments/845292400440377374/845292550889406494/R2F_smaller.png"
+        )
+        await selectedDM.send(embed=selectedChara)
+
+        # if the winner is selecting their character
+        if matches[matchWindowID]["heading"] == "N/A":
+            matches[matchWindowID]["selections"][playerID] = False
+            matches[matchWindowID]["selections"][opponents[playerID]] = True
+            p1name = str(client.get_user(playerID))
+            chara1 = matches[matchWindowID]['players'][playerID]['character']
+            matches[matchWindowID]["heading"] = f"({p1name[:-5]}) {chara1} {versus} "
+            # print(matches[matchWindowID]["heading"])  # testing
+            stage = matches[matchWindowID]["stages"][0]
+            stageName = emotes2stage[stage]
+
+            playerCharacter = matches[matchWindowID]['players'][playerID]['character']
+            gameCount = matches[matchWindowID]['gameCount']
+            selectDM = await opponentDM.create_dm()
+            charaSelect = discord.Embed(title=f"[Game {gameCount} | {stage} {stageName}]",
+                                        description=f"{playerDM} is going {playerCharacter}.\n"
+                                                    f"Choose your character for Game {gameCount}! \n Type out what character you will use.\n"
+                                                    f"If you're staying on the same character, click {stay}.\n"
+                                                    f"\n"
+                                                    f"If you're having trouble selecting a character, type ``-characters``"
+                                                    " to see a list of all character inputs I can recognize.",
+                                        color=defaultColor)
+            charaSelect.set_thumbnail(
+                url="https://media.discordapp.net/attachments/405387786036707329/843029286961414144/coinhand2.png")
+            opponentSel = await selectDM.send(embed=charaSelect)
+            await opponentSel.add_reaction(stay)
+
+        # if the loser is selecting their character
+        elif matches[matchWindowID]["heading"] != "N/A":
+            matches[matchWindowID]["selections"][playerID] = False
+            p2name = str(client.get_user(playerID))
+            chara2 = matches[matchWindowID]['players'][playerID]['character']
+            matches[matchWindowID]["heading"] += f"{chara2} ({p2name[:-5]})\n"
+            # print(matches[matchWindowID]["heading"])  # testing
+
+            matchWindowObj = matches[matchWindowID]["messageObj"]
+            embedCount = matches[matchWindowID]["gameCount"] - 1
+            newEmbed = matchWindowObj.embeds[0]
+            newEmbed.set_field_at(embedCount,
+                                  name=f"Game {matches[matchWindowID]['gameCount']}",
+                                  value=f"{matches[matchWindowID]['heading']}"
+                                        f"Stage:\n"
+                                        f"{matches[matchWindowID]['stages'][0]} {emotes2stage[matches[matchWindowID]['stages'][0]]} \n",
+                                  inline=False
+                                  )
+            await matchWindowObj.edit(embed=newEmbed)
+            for icon in winloss:
+                await matchWindowObj.add_reaction(icon)
+
 
 
 @client.event
@@ -1860,15 +2055,15 @@ async def on_message(message):
                 charaSelect = discord.Embed(title=f"[Game {gameCount} | {stage} {stageName}]",
                                             description=f"{playerDM} is going {playerCharacter}.\n"
                                                         f"Choose your character for Game {gameCount}! \n Type out what character you will use.\n"
-                                                        f"If you're staying on the same character, type ''stay''.\n"
+                                                        f"If you're staying on the same character, click {stay}.\n"
                                                         f"\n"
                                                         f"If you're having trouble selecting a character, type ``-characters``"
                                                         " to see a list of all character inputs I can recognize.",
                                             color=defaultColor)
                 charaSelect.set_thumbnail(
                     url="https://media.discordapp.net/attachments/405387786036707329/843029286961414144/coinhand2.png")
-                await selectDM.send(embed=charaSelect)
-
+                opponentSel = await selectDM.send(embed=charaSelect)
+                await opponentSel.add_reaction(stay)
             # if the loser is selecting their character
             elif matches[matchWindowID]["heading"] != "N/A":
                 matches[matchWindowID]["selections"][authorID] = False
@@ -1890,3 +2085,8 @@ async def on_message(message):
                 await matchWindowObj.edit(embed=newEmbed)
                 for icon in winloss:
                     await matchWindowObj.add_reaction(icon)
+
+
+# last worked on 1/22/2022
+
+client.run()
