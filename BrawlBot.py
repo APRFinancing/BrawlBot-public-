@@ -2203,8 +2203,8 @@ async def on_message(message):
 
 
 if clonebot == True:
-    botkey = "ODY5NzAwNTE4NTgxMjQ4MTIx.YQCBuQ.GvWSpF-XngiH-eTDZw5NFYk_e2c"
+    botkey = 
 elif clonebot == False:
-    botkey = "ODM3MDkzNzkzNzIyNjYyOTQy.YIniWA.qA-3rAYUL0CeBvQPn0y-IHjP9Ho"
+    botkey = 
 
 client.run(botkey)
