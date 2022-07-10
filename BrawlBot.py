@@ -47,7 +47,7 @@ LC = '<:LylatCruise:925957016135020545>'
 PS = '<:PS1:925957052147310622>'
 CS = '<:CastleSiege:925957337867485284>'
 FO = '<:FrigateOrpheon:925957063383867483>'
-
+noBan = '⬜'
 completestagelist = [BF, FD, SV, YI, LC, PS, CS, FO]
 netpColor = 4312575  # light blue
 wifiColor = 16613797  # light pink
@@ -148,7 +148,7 @@ with open("banlistsave.json") as f:
         fixbanned.append(int(userID))
     banned = fixbanned
     # print(banned)
-
+global preranked
 preranked = {"NETP": {}, "WIFI": {}}
 with open("prerankingsave.json") as f:
     loadprerankings = json.load(f)
@@ -156,7 +156,7 @@ with open("prerankingsave.json") as f:
     fixedprerankingsW = {int(key): value for key, value in loadprerankings["WIFI"].items()}
     preranked["NETP"] = fixedprerankingsN
     preranked["WIFI"] = fixedprerankingsW
-
+global rankings
 rankings = {"NETP": {}, "WIFI": {}}
 with open("rankingsave.json") as f:
     loadRankings = json.load(f)
@@ -197,7 +197,7 @@ startersize = 3
 if startersize == 3:
     starters = ['<:Battlefield:837907213627686943>', '<:FinalDestination:837907213695057950>',
                 '<:Smashville:837907213678542863>']
-    counterpicks = ['<:YoshisIsland:925956998024007680>', '<:PS1:925957052147310622>']
+    counterpicks = ['<:YoshisIsland:925956998024007680>']
     stages = [BF, FD, SV]
 
 elif startersize == 5:
@@ -208,7 +208,15 @@ elif startersize == 5:
                     '<:FrigateOrpheon:925957063383867483>']
     stages = [BF, FD, SV, YI, LC]
 fullstagelist = starters + counterpicks
-dsl = True
+dsl = False
+global decay
+decay = False
+global noDecayListNetp
+noDecayListNetp = []
+global noDecayListWifi
+noDecayListWifi = []
+global minGames
+minGames = 3;
 
 sets = ["bo3", "bo5", "bo7"]
 
@@ -475,7 +483,8 @@ def addPlayer(player, matchType):
     :return:
     '''
     rankings[matchType][player] = 1500
-    preranked[matchType][player] = 3
+    global minGames
+    preranked[matchType][player] = minGames
     saveRankings(rankings)
     savePreRanked(preranked)
 
@@ -515,7 +524,7 @@ def calculateELO(winnerID, loserID, matchType, endCheck, modCheck, wNeeded):
 
     # calculates the likely-hood of the result not occurring
     score = 1 - (1 / (1 + 10 ** ((loserRating - winnerRating) / 400)))
-    multiplier = 19
+    multiplier = 36
 
     if endCheck == True or modCheck == True:
         wRewardPoints = round(multiplier * score * wMultiplier * endMultiplier)
@@ -611,6 +620,77 @@ async def helpme(ctx):
                   f"> This command sets up a smashdown card to help keep track of characters and score.\n"
                   f"> (usable in the freeplay channels)")
     await ctx.send("I sent you a DM with a list of my commands.")
+
+
+@client.command()
+async def decayon(ctx):
+
+    if ctx.message.channel.id != modChannel:
+        return
+
+    await ctx.send("Decay activated")
+    global decay
+    decay = True
+    global noDecayListNetp
+    global noDecayListWifi
+    #print(f"already played matches wifi: {noDecayListWifi}")
+    #print(f"already played matches netp: {noDecayListNetp}")
+    while decay == True:
+
+        decayPeriod = 216000 # 2.5 days
+        await asyncio.sleep(decayPeriod)
+        global minGames
+        for key in list(rankings["NETP"].keys()):
+
+            if key in preranked["NETP"].keys():
+                if preranked["NETP"][key] == minGames:
+                    continue
+            if key not in noDecayListNetp:
+                #print(f"decaying netp: {key}")
+                rankings["NETP"][key] -= 1
+                ELOCapCheck(key, "NETP")
+                saveRankings(rankings)
+
+
+        for key in list(rankings["WIFI"].keys()):
+
+            if key in preranked["WIFI"].keys():
+                if preranked["WIFI"][key] == minGames:
+                    continue
+            if key not in noDecayListWifi:
+                #print(f"decaying wifi: {key}")
+                rankings["WIFI"][key] -= 1
+                ELOCapCheck(key, "WIFI")
+                saveRankings(rankings)
+
+        noDecayListNetp = []
+        noDecayListWifi = []
+        #print(f"wifi list should be empty: {noDecayListWifi}")
+        #print(f"netp list should be empty: {noDecayListNetp}")
+        #print("decay happened")
+    return
+
+
+@client.command()
+async def decayoff(ctx):
+    if ctx.message.channel.id != modChannel:
+        return
+    await ctx.send("Decay deactivated")
+    global decay
+    decay = False
+    return
+
+@client.command()
+async def newseason(ctx):
+    if ctx.message.channel.id != modChannel:
+        return
+    await ctx.send("New season started. Ranks were reset.")
+    global rankings
+    rankings = {"NETP":{}, "WIFI":{}}
+    global preranked
+    preranked = {"NETP":{}, "WIFI":{}}
+    saveRankings(rankings)
+    savePreRanked(preranked)
 
 
 @client.command()
@@ -1060,6 +1140,9 @@ async def on_reaction_add(reaction, user):
             if challengerID == playerID:  # prevents you from challenging yourself
                 return
             if user.id in players2matches.keys():
+                await reaction.remove(user)
+                channel = client.get_channel(searchChannel)
+                await channel.send(f"<@{user.id}>You are currently in a match.", delete_after=4)
                 return
             setType = searchMessages[messageID]["setType"]
             matchType = searchMessages[messageID]["matchType"]
@@ -1113,7 +1196,7 @@ async def on_reaction_add(reaction, user):
                 # print("matches should now be gone: ", matches)
 
         # event when players click on a reaction of a stage
-        elif str(reaction.emoji) in matches[messageID]["stages"]:
+        elif (str(reaction.emoji) in matches[messageID]["stages"]) or (str(reaction.emoji) == noBan):
 
             # game 1 procedures
             if matches[messageID]["gameCount"] == 1:
@@ -1204,7 +1287,11 @@ async def on_reaction_add(reaction, user):
                     matches[messageID]["banning"] = "N/A"
                     #print("made it to bans")
                     matches[messageID]["stagesel"] = opponents[user.id]
-                    matches[messageID]["stages"].remove(str(reaction.emoji))
+                    if str(reaction.emoji) in matches[messageID]["stages"]:
+                        #print("stage recognized")
+                        matches[messageID]["stages"].remove(str(reaction.emoji))
+                    elif str(reaction.emoji) == noBan:
+                        pass
                     #print("remaining stages", matches[messageID]["stages"])
                     newEmbed.set_field_at(gameCount - 1, name=f"Game {gameCount}",
                                             value=f""
@@ -1213,6 +1300,11 @@ async def on_reaction_add(reaction, user):
                                                 f"{showstagelist(matches[messageID]['stages'])}",
                                             inline=False)
                     await reaction.clear()
+                    try:
+                        await matchWindowObj.clear_reaction(noBan)
+                    except:
+                        pass
+
                     await matchWindowObj.edit(embed=newEmbed)
 
                 elif matches[messageID]["stagesel"] == user.id:
@@ -1230,6 +1322,11 @@ async def on_reaction_add(reaction, user):
                     matches[messageID]["heading"] = "N/A"
                     for icon in matches[messageID]['stages']:
                         await matchWindowObj.clear_reaction(icon)
+                    try:
+                        await matchWindowObj.clear_reaction(noBan)
+                    except:
+                        pass
+                    await matchWindowObj.clear_reaction(noBan)
                     matches[messageID]["stages"] = [f"{stage}"]
                     await matchWindowObj.edit(embed=newEmbed)
 
@@ -1263,8 +1360,8 @@ async def on_reaction_add(reaction, user):
             elif str(reaction.emoji) == loss and opponents[user.id] != matches[messageID]["winner"]:
                 return
 
-            calculateELO(matches[messageID]["winner"], matches[messageID]["loser"], matches[messageID]["matchType"],
-                         endCheck=False, modCheck=False, wNeeded=2)
+            #calculateELO(matches[messageID]["winner"], matches[messageID]["loser"], matches[messageID]["matchType"],
+             #            endCheck=False, modCheck=False, wNeeded=2)
 
             matches[messageID]["selections"][matches[messageID]["winner"]] = True
             matches[messageID]["selections"][matches[messageID]["loser"]] = False
@@ -1316,11 +1413,24 @@ async def on_reaction_add(reaction, user):
             if matches[messageID]["players"][user.id]["wins"] == matches[messageID]["winsNeeded"] or \
                     matches[messageID]["players"][opponents[user.id]]["wins"] == matches[messageID]["winsNeeded"]:
                 winsNeed = matches[messageID]["winsNeeded"]
-                calculateELO(winner, loser, matches[messageID]["matchType"], endCheck=True, modCheck=False,
+                calculateELO(winner, loser, matches[messageID]["matchType"], endCheck=False, modCheck=False,
                              wNeeded=winsNeed)
                 matchType = matches[messageID]['matchType']
                 newWinnerELO = rankings[matchType][winner]
                 newLoserELO = rankings[matchType][loser]
+                global noDecayListNetp
+                global noDecayListWifi
+                if matchType == "NETP":
+                    if winner not in noDecayListNetp:
+                        noDecayListNetp.append(winner)
+                    if loser not in noDecayListNetp:
+                        noDecayListNetp.append(loser)
+                elif matchType == "WIFI":
+                    if winner not in noDecayListWifi:
+                        noDecayListWifi.append(winner)
+                    if loser not in noDecayListWifi:
+                        noDecayListWifi.append(loser)
+                #print(f"ids should be added: {noDecayListNetp} {noDecayListWifi}")
                 oldWinnerELO = matches[messageID]['players'][winner]['elo']
                 oldLoserELO = matches[messageID]['players'][loser]['elo']
                 winnerChange = showELOChange(newWinnerELO, oldWinnerELO)
@@ -1337,7 +1447,7 @@ async def on_reaction_add(reaction, user):
                                 value=f"{win} {str(client.get_user(winner))[:-5]} [{showWinnerELO}] {winnerChange}\n"
                                       f"{loss} {str(client.get_user(loser))[:-5]} [{showLoserELO}] {loserChange}",
                                 inline=False)
-                rmWindow = 90
+                rmWindow = 30
                 embed.set_footer(text= f"Both players can click {rm} to initiate a rematch")
                 winnerAvatar = client.get_user(winner).avatar_url
                 embed.set_thumbnail(url=winnerAvatar)
@@ -1372,6 +1482,7 @@ async def on_reaction_add(reaction, user):
                 # print("newstages", newstages)
                 for icon in newstages:
                     await matchWindowObj.add_reaction(icon)
+                await matchWindowObj.add_reaction(noBan)
 
         # if rematch is clicked
         elif reaction.emoji == rm and user.id in matches[messageID]["players"].keys():
@@ -1696,7 +1807,8 @@ async def on_reaction_remove(reaction, user):
     if reaction.emoji == challenge:
         if messageID not in searchMessages.keys():
             return
-        searchMessages[messageID]["challengers"].remove(userID)
+        if userID in searchMessages[messageID]["challengers"]:
+            searchMessages[messageID]["challengers"].remove(userID)
         # print("user should be removed: ", searchMessages[messageID]["challengers"])
         # print("challenger successfully removed")
 
@@ -2087,6 +2199,12 @@ async def on_message(message):
                     await matchWindowObj.add_reaction(icon)
 
 
-# last worked on 1/22/2022
+# last worked on 7/10/2022
 
-client.run()
+
+if clonebot == True:
+    botkey = "ODY5NzAwNTE4NTgxMjQ4MTIx.YQCBuQ.GvWSpF-XngiH-eTDZw5NFYk_e2c"
+elif clonebot == False:
+    botkey = "ODM3MDkzNzkzNzIyNjYyOTQy.YIniWA.qA-3rAYUL0CeBvQPn0y-IHjP9Ho"
+
+client.run(botkey)
