@@ -10,7 +10,7 @@ intents.members = True
 clonebot = False
 
 if clonebot == True:
-    cpfx = "."
+    cpfx = ","
 elif clonebot == False:
     cpfx = "-"
 
@@ -19,7 +19,7 @@ client = commands.Bot(command_prefix=cpfx, intents=intents)
 if clonebot == False:
     searchChannel = 854427760389652490
     miscChannel = 854428093459202099
-    modChannel = 854428188746580059
+    modChannel = 1029873581158576230
     matchChannel = 854428351800016907
 elif clonebot == True:
     searchChannel = 837907088969302019
@@ -39,14 +39,44 @@ abort = '🔴'
 accept = '✅'
 cancel = '❌'
 versus = '<:vs:843364613986189342>'
-BF = '<:Battlefield:837907213627686943>'
-FD = '<:FinalDestination:837907213695057950>'
-SV = '<:Smashville:837907213678542863>'
-YI = '<:YoshisIsland:925956998024007680>'
-LC = '<:LylatCruise:925957016135020545>'
-PS = '<:PS1:925957052147310622>'
-CS = '<:CastleSiege:925957337867485284>'
-FO = '<:FrigateOrpheon:925957063383867483>'
+
+BF = '<Battlefield:837907213627686943>'
+FD = '<FinalDestination:837907213695057950>'
+SV = '<Smashville:837907213678542863>'
+YI = '<YoshisIsland:925956998024007680>'
+LC = '<LylatCruise:925957016135020545>'
+PS = '<PS1:925957052147310622>'
+CS = '<CastleSiege:925957337867485284>'
+FO = '<FrigateOrpheon:925957063383867483>'
+PS2 = '<:PS2:1059009265433596004>'
+
+# BF = client.get_emoji(837907213627686943) # Battlefield
+# FD = client.get_emoji(837907213695057950) # FinalDestination
+# SV = client.get_emoji(837907213678542863) # Smashville
+# YI = client.get_emoji(925956998024007680) # YoshisIsland
+# LC = client.get_emoji(925957016135020545) # LylatCruise
+# PS = client.get_emoji(925957052147310622) # PS1
+# CS = client.get_emoji(925957337867485284) # CastleSiege
+# FO = client.get_emoji(925957063383867483) # Frigate Orpheon
+
+# BF = discord.PartialEmoji(name="Battlefield", id=837907213627686943)
+# FD = discord.PartialEmoji(name="FinalDestination", id=837907213695057950)
+# SV = discord.PartialEmoji(name="Smashville", id=837907213678542863)
+# YI = discord.PartialEmoji(name="YoshisIsland", id=925956998024007680)
+# LC = discord.PartialEmoji(name="LylatCruise", id=925957016135020545)
+# PS = discord.PartialEmoji(name="PS1", id=925957052147310622)
+# CS = discord.PartialEmoji(name="CastleSiege", id=925957337867485284)
+# FO = discord.PartialEmoji(name="FrigateOrpheon", id=925957063383867483)
+
+# BF = '<:Battlefield:837907213627686943>'
+# FD = '<:FinalDestination:837907213695057950>'
+# SV = '<:Smashville:837907213678542863>'
+# YI = '<:YoshisIsland:925956998024007680>'
+# LC = '<:LylatCruise:925957016135020545>'
+# PS = '<:PS1:925957052147310622>'
+# CS = '<:CastleSiege:925957337867485284>'
+# FO = '<:FrigateOrpheon:925957063383867483>'
+
 noBan = '⬜'
 completestagelist = [BF, FD, SV, YI, LC, PS, CS, FO]
 netpColor = 4312575  # light blue
@@ -64,7 +94,8 @@ stageTNs = {
     '<:LylatCruise:925957016135020545>': 'https://cdn.discordapp.com/attachments/845292400440377374/861081448805826560/Lylat_Preview.png',
     '<:PS1:925957052147310622>': 'https://cdn.discordapp.com/attachments/845292400440377374/861081446424510474/PS1_Preview.png',
     '<:CastleSiege:925957337867485284>': 'https://cdn.discordapp.com/attachments/845292400440377374/861081434109640714/Castle_Siege_Preview.png',
-    '<:FrigateOrpheon:925957063383867483>': 'https://cdn.discordapp.com/attachments/845292400440377374/861081444134813706/Frigate_Orpheon_Preview.png'
+    '<:FrigateOrpheon:925957063383867483>': 'https://cdn.discordapp.com/attachments/845292400440377374/861081444134813706/Frigate_Orpheon_Preview.png',
+    '<:PS2:1059009265433596004>': 'https://cdn.discordapp.com/attachments/845292400440377374/1059013954493497344/PS2TN.png'
 }
 
 brawlChara = {"mario": '<:mario:838822011412676708>', "donkey kong": '<:donkeykong:838822011114356760>',
@@ -174,6 +205,7 @@ searchSelection = [accept, cancel]
 winloss = ["<:win:844045482237886465>", "<:loss:844045492798750761>"]
 win = "<:win:844045482237886465>"
 loss = "<:loss:844045492798750761>"
+
 emotes2stage = {'<:Battlefield:837907213627686943>': "Battlefield",
                 '<:FinalDestination:837907213695057950>': "Final Destination",
                 '<:Smashville:837907213678542863>': "Smashville",
@@ -181,8 +213,19 @@ emotes2stage = {'<:Battlefield:837907213627686943>': "Battlefield",
                 '<:LylatCruise:925957016135020545>': "Lylat Cruise",
                 '<:PS1:925957052147310622>': "Pokemon Stadium 1",
                 '<:CastleSiege:925957337867485284>': "Castle Siege",
-                '<:FrigateOrpheon:925957063383867483>': "Frigate Orpheon"
+                '<:FrigateOrpheon:925957063383867483>': "Frigate Orpheon",
+                '<:PS2:1059009265433596004>': "Pokemon Stadium 2"
                 }
+
+# emotes2stage = {'<:Battlefield:837907213627686943>': "Battlefield",
+#                 '<:FinalDestination:837907213695057950>': "Final Destination",
+#                 '<:Smashville:837907213678542863>': "Smashville",
+#                 '<:YoshisIsland:925956998024007680>': "Yoshi's Island",
+#                 '<:LylatCruise:925957016135020545>': "Lylat Cruise",
+#                 '<:PS1:925957052147310622>': "Pokemon Stadium 1",
+#                 '<:CastleSiege:925957337867485284>': "Castle Siege",
+#                 '<:FrigateOrpheon:925957063383867483>': "Frigate Orpheon"
+#                 }
 stage2emotes = {'<:Battlefield:837907213627686943>': BF,
                 '<:FinalDestination:837907213695057950>': FD,
                 '<:Smashville:837907213678542863>': SV,
@@ -190,14 +233,15 @@ stage2emotes = {'<:Battlefield:837907213627686943>': BF,
                 '<:LylatCruise:925957016135020545>': LC,
                 '<:PS1:925957052147310622>': PS,
                 '<:CastleSiege:925957337867485284>': CS,
-                '<:FrigateOrpheon:925957063383867483>': FO
+                '<:FrigateOrpheon:925957063383867483>': FO,
+                '<:PS2:1059009265433596004>': PS2
                 }
 
 startersize = 3
 if startersize == 3:
     starters = ['<:Battlefield:837907213627686943>', '<:FinalDestination:837907213695057950>',
                 '<:Smashville:837907213678542863>']
-    counterpicks = ['<:YoshisIsland:925956998024007680>']
+    counterpicks = ['<:YoshisIsland:925956998024007680>', '<:LylatCruise:925957016135020545>', '<:PS2:1059009265433596004>']
     stages = [BF, FD, SV]
 
 elif startersize == 5:
@@ -208,7 +252,7 @@ elif startersize == 5:
                     '<:FrigateOrpheon:925957063383867483>']
     stages = [BF, FD, SV, YI, LC]
 fullstagelist = starters + counterpicks
-dsl = False
+dsl = True
 global decay
 decay = False
 global noDecayListNetp
@@ -1271,10 +1315,10 @@ async def on_reaction_add(reaction, user):
                                               inline=False)
                         newEmbed.set_thumbnail(url=stageTNs[matches[messageID]['stages'][0]])
                         await reaction.clear()
-                        await matchWindowObj.clear_reaction(matches[messageID]['stages'][0])
+                        await matchWindowObj.clear_reaction(matches[messageID]['stages'][0].strip("<:>"))
                         await matchWindowObj.edit(embed=newEmbed)
                         for icon in winloss:
-                            await matchWindowObj.add_reaction(icon)
+                            await matchWindowObj.add_reaction(icon.strip("<:>"))
 
             # game 2 and onwards procedures
             elif matches[messageID]["gameCount"] >= 2:
@@ -1321,7 +1365,7 @@ async def on_reaction_add(reaction, user):
                     newEmbed.set_thumbnail(url=stageTNs[stage])
                     matches[messageID]["heading"] = "N/A"
                     for icon in matches[messageID]['stages']:
-                        await matchWindowObj.clear_reaction(icon)
+                        await matchWindowObj.clear_reaction(icon.strip("<:>"))
                     try:
                         await matchWindowObj.clear_reaction(noBan)
                     except:
@@ -1475,7 +1519,7 @@ async def on_reaction_add(reaction, user):
                                 inline=False)
                 await matchWindowObj.edit(embed=embed)
                 for icon in winloss:
-                    await matchWindowObj.clear_reaction(icon)
+                    await matchWindowObj.clear_reaction(icon.strip("<:>"))
                 newstages = []
                 for stageicon in matches[messageID]['stages']:
                     newstages.append(stage2emotes[stageicon])
@@ -2001,7 +2045,7 @@ async def on_raw_reaction_add(payload):
                                   )
             await matchWindowObj.edit(embed=newEmbed)
             for icon in winloss:
-                await matchWindowObj.add_reaction(icon)
+                await matchWindowObj.add_reaction(icon.strip("<:>"))
 
 
 
@@ -2125,7 +2169,7 @@ async def on_message(message):
                                       inline=False)
                 await matchWindowObj.edit(embed=newEmbed)
                 for icon in stages:
-                    await matchWindowObj.add_reaction(icon)
+                    await matchWindowObj.add_reaction(icon.strip("<:>"))
 
                 #print("checking for who's banning: ", matches[matchWindowID])
 
@@ -2199,12 +2243,12 @@ async def on_message(message):
                     await matchWindowObj.add_reaction(icon)
 
 
-# last worked on 7/10/2022
+# last worked on 1/1/2023
 
 
 if clonebot == True:
-    botkey = 
+    botkey = " "
 elif clonebot == False:
-    botkey = 
+    botkey = " "
 
 client.run(botkey)
